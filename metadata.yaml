@@ -1,3 +1,0 @@
-requires:
-  docker-registry:
-    interface: docker-registry

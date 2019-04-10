@@ -20,7 +20,7 @@ import os
 import subprocess
 import hashlib
 import json
-import random
+import traceback
 
 from pathlib import Path
 from subprocess import check_output, check_call
@@ -152,15 +152,26 @@ def get_ingress_address(endpoint_name):
     try:
         network_info = hookenv.network_get(endpoint_name)
     except NotImplementedError:
-        network_info = []
+        network_info = {}
 
-    if network_info and 'ingress-addresses' in network_info:
-        # just grab the first one for now, maybe be more robust here?
-        return network_info['ingress-addresses'][0]
-    else:
+    if not network_info or 'ingress-addresses' not in network_info:
         # if they don't have ingress-addresses they are running a juju that
         # doesn't support spaces, so just return the private address
         return hookenv.unit_get('private-address')
+
+    addresses = network_info['ingress-addresses']
+
+    # Need to prefer non-fan IP addresses due to various issues, e.g.
+    # https://bugs.launchpad.net/charm-gcp-integrator/+bug/1822997
+    # Fan typically likes to use IPs in the 240.0.0.0/4 block, so we'll
+    # prioritize those last. Not technically correct, but good enough.
+    try:
+        sort_key = lambda a: int(a.partition('.')[0]) >= 240
+        addresses = sorted(addresses, key=sort_key)
+    except Exception:
+        hookenv.log(traceback.format_exc())
+
+    return addresses[0]
 
 
 def service_restart(service_name):

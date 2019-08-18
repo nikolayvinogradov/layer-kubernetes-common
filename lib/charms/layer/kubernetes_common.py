@@ -448,7 +448,7 @@ def generate_openstack_cloud_config():
         'domain-name = {}'.format(openstack.user_domain_name),
     ]
     if openstack.endpoint_tls_ca:
-        lines.append('ca-file = /etc/kubernetes/openstack-ca.cert')
+        lines.append('ca-file = /etc/config/endpoint-ca.cert')
 
     lines.extend([
         '',
